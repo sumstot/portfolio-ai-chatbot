@@ -1,14 +1,10 @@
-require 'sinatra'
-require 'net/http'
-require 'uri'
-require 'json'
-require 'rack/cors'
-require 'dotenv'
+require 'bundler/setup'
+Bundler.require
+require 'dotenv/load'
 
-# Enable CORS for your Netlify site
 use Rack::Cors do
   allow do
-    origins 'https://sorenumstot.com', 'http://localhost:4567'
+    origins 'https://sorenumstot.com', 'http://localhost:4567', 'http://192.168.0.13:4567'
     resource '*',
       headers: :any,
       methods: [:get, :post, :options]
@@ -17,43 +13,72 @@ end
 
 $request_counts = {}
 
-
 PORTFOLIO_DATA = <<HEREDOC
   About Soren:
   - Currently based in Osaka, originally from San Diego, California
   - Web developer specializing in Ruby on Rails monoliths using hotwire postgres, JavaScript, Python
   - Currently learning advanced Ruby on Rails and React
-  - Loves snowboarding and eating ramen - has been to 200+ ramen shops in Japan!
+  - Loves snowboarding and eating ramen - has been to 300+ ramen shops in Japan!
+  - Enjoys photography
   - Developing an English ramen application for foreigners in Japan
   - Open to collaboration on Ruby on Rails or Python applications
+  - Fluent in English and Japanese
 
   Key Projects:
-  1. Ozei - Restaurant reservation app (Ruby on Rails, JavaScript, PostgreSQL)
+
+  Professional
+
+  1. Kengaku Cloud
+    - Worked on Biz Creation's Kengaku Cloud application. This is an application that helps homebuilders
+    and real estate companies with customer acquisition.
+    - Implemented our event page's new user interface which is now used by a majority of our users
+    - Help implement our new user interface for our management page
+    - Worked with legacy code and help fix numerous bug issues
+    - Worked with API integrations including Google Clanedar and Open AI
+    - Experience working with MCPs for AI assisted development
+    - Optimize SQL and active record queries while also fixing sql injection vulnerabilities
+    - In charge of yearly Rails appliaction upgrades and checking for deprecated settings
+
+  2. Appocloud
+    - This application is a appointment matching application connected to a user's google calendar
+    - Users can send possible appointment times to their clients and when the client accepts the acepted time
+    is posted to the user's google calendar
+    - Worked with Turbo for for a modern user interface
+    - Implemented background jobs for API connections to google calendar and handling google calendar events
+
+  Personal Projects
+
+  1. Ramen Ranger - An app to help foreigners find the best bowls of ramen around Japan
+    - Utilizes the google maps API to display the shops Soren has visited
+    - Uses Hotwire, Turbo, and SQLite to get experience using the full modern Ruby on Rails stack
+    - Uses AWS S3 for storage of images
+
+  2. Ozei - Restaurant reservation app (Ruby on Rails, JavaScript, PostgreSQL)
     - Final bootcamp project, role: Project Manager
     - Connects groups with Tokyo restaurant reservations via Hot Pepper API
 
-  2. Slack Clone - Real-time chat app (Ruby on Rails, ActionCable, AJAX)
+  3. Slack Clone - Real-time chat app (Ruby on Rails, ActionCable, AJAX)
     - Individual project with instant messaging using ActionCable
 
-  3. Crypto Portfolio Calculator - React + Rails app
+  4. Crypto Portfolio Calculator - React + Rails app
     - Live crypto tracking with Coinmarketcap API integration
 
-  4. Pet Rental Platform - AirBnB clone for pet rentals
+  5. Pet Rental Platform - AirBnB clone for pet rentals
     - Backend developer role, Ruby on Rails
 
-  5. Movie Watchlist - Full-stack Rails app
+  6. Movie Watchlist - Full-stack Rails app
     - Personal movie tracking application
 
-  6. Pong Game - Python game using Turtle graphics
+  7. Pong Game - Python game using Turtle graphics
     - Two-player simultaneous gameplay
 
-  7. Snake Game - Python OOP game with high score tracking
+  8. Snake Game - Python OOP game with high score tracking
     - Uses CSV file for persistent high scores
 
-  8. Etch-a-Sketch - Vanilla JavaScript DOM manipulation
+  9. Etch-a-Sketch - Vanilla JavaScript DOM manipulation
     - Interactive drawing with adjustable grid size
 
-  Tech Skills: Ruby on Rails, JavaScript, React, Python, HTML, CSS, PostgreSQL, API integration, Heroku deployment
+  Tech Skills: Ruby on Rails, JavaScript, PostgreSQL, API integration, Advanced Git, React, Python, HTML, CSS, Heroku deployment
 
   Contact: Available on GitHub and LinkedIn
   Location: Osaka, Japan (originally San Diego, CA)
@@ -66,15 +91,14 @@ def call_gemini_api(message)
     return "Configuration error. Please contact Soren directly!"
   end
 
-  # Create the system prompt with your portfolio data
-  system_prompt = %{
+  system_prompt = <<HEREDOC
 You are Soren's portfolio assistant. Answer questions about Soren's background, projects, and skills based on the following information. Be conversational, friendly, and enthusiastic about his work, especially his ramen adventures! Keep responses concise but informative (under 150 words).
 
 If asked about something not in the portfolio data, politely redirect to contacting Soren directly via his LinkedIn or GitHub.
 
 Portfolio Information:
 #{PORTFOLIO_DATA}
-}
+HEREDOC
 
   uri = URI("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=#{api_key}")
 
@@ -95,7 +119,7 @@ Portfolio Information:
     ],
     generationConfig: {
       maxOutputTokens: 200,
-      temperature: 0.7
+      temperature: 0.4
     }
   }.to_json
 
@@ -105,11 +129,11 @@ Portfolio Information:
     data = JSON.parse(response.body)
     data.dig('candidates', 0, 'content', 'parts', 0, 'text')
   else
-    puts "Gemini API Error: #{response.code} - #{response.body}" # For debugging
+    puts "Gemini API Error: #{response.code} - #{response.body}"
     "Sorry, I'm having trouble right now. Please try again later or contact Soren directly!"
   end
 rescue => e
-  puts "Error calling Gemini: #{e.message}" # For debugging
+  puts "Error calling Gemini: #{e.message}"
   "Sorry, something went wrong. Please contact Soren directly!"
 end
 
@@ -117,14 +141,11 @@ def rate_limit_check(ip)
   $request_counts[ip] ||= []
   $request_counts[ip] << Time.now
 
-  # Clean requests older than 1 hour
   $request_counts[ip].reject! { |time| time < Time.now - 3600 }
 
-  # Allow 10 requests per hour per IP
   $request_counts[ip].length <= 10
 end
 
-# Routes
 get '/' do
   content_type :json
   {
@@ -137,13 +158,11 @@ end
 post '/chat' do
   content_type :json
 
-  # Rate limiting
   unless rate_limit_check(request.ip)
     status 429
     return { error: "Too many requests. Please wait a bit!" }.to_json
   end
 
-  # Parse request
   begin
     request_body = JSON.parse(request.body.read)
   rescue JSON::ParserError
@@ -158,7 +177,6 @@ post '/chat' do
     return { error: "Please provide a message" }.to_json
   end
 
-  # Basic input validation
   if user_message.length > 500
     return { error: "Message too long. Please keep it under 500 characters." }.to_json
   end
@@ -167,13 +185,12 @@ post '/chat' do
     response = call_gemini_api(user_message)
     { response: response }.to_json
   rescue => e
-    puts "Chat error: #{e.message}" # For debugging
+    puts "Chat error: #{e.message}"
     status 500
     { error: "Something went wrong. Please try again!" }.to_json
   end
 end
 
-# Health check endpoint
 get '/health' do
   content_type :json
   {
