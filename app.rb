@@ -24,7 +24,16 @@ PORTFOLIO_DATA = <<HEREDOC
   - Open to collaboration on Ruby on Rails or Python applications
   - Fluent in English and Japanese
 
-  Key Projects:
+  Soren's top ramen restaurants:
+    - Moyeo Mensuke https://maps.app.goo.gl/y4ehYzdppvaESSem8
+    - Ramen Hayato https://maps.app.goo.gl/Z5S59f3E12sTUb1F8
+    - Ramen Tsuji https://maps.app.goo.gl/Gs5tSsT5MdMLx6iDA
+    - Ramen FeeL https://maps.app.goo.gl/W8N8xdxkbsxenfku6
+    - Buta no Hoshi https://maps.app.goo.gl/xAqgorZep2zq2Huj6
+    - Ramen Break Beats https://maps.app.goo.gl/wTawhKpXkwWZJJxHA
+    - Seikoudoku https://maps.app.goo.gl/u3EWiuJCAgi9QpAm7
+    - Ramen Kai https://maps.app.goo.gl/Dyg52Zna53FAVTm59
+    - 
 
   Professional
 
